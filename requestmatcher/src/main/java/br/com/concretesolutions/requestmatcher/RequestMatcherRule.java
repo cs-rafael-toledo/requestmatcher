@@ -18,6 +18,20 @@ import okhttp3.mockwebserver.SocketPolicy;
 
 import static org.junit.Assert.fail;
 
+/**
+ * Abstract rule for wrapping a {@link MockWebServer} with more features.
+ * <br />
+ * This sets up a mock web server and several helpers for enqueuing responses.
+ * These can buffer assertions for the requests it receives.
+ * <br />
+ * It is an abstract type because unit tests and instrumented tests have different
+ * paths to search for fixtures.
+ *
+ * @see MockWebServer
+ * @see UnitTestRequestMatcherRule
+ * @see InstrumentedTestRequestMatcherRule
+ * @see RequestMatcher
+ */
 public abstract class RequestMatcherRule implements TestRule {
 
     private static final String ASSERT_HEADER = "REQUEST-ASSERT", ERROR_MESSAGE = "Failed assertion for %s";
@@ -42,6 +56,12 @@ public abstract class RequestMatcherRule implements TestRule {
         return requestAssertionStatement(base);
     }
 
+    /**
+     * Enqueue a {@link MockResponse} and create a {@link RequestMatcher} associated with it
+     *
+     * @param response The expected response
+     * @return A matcher for request assertions.
+     */
     public RequestMatcher enqueue(MockResponse response) {
         final RequestMatcher requestMatcher = new RequestMatcher();
         final String assertPath = response.hashCode() + "_::_" + requestMatcher.hashCode();
@@ -52,14 +72,20 @@ public abstract class RequestMatcherRule implements TestRule {
         return requestMatcher;
     }
 
+    /**
+     * Helper for enqueuing a disconnect response.
+     *
+     * @return A matcher for request assertions.
+     */
     public RequestMatcher enqueueDisconnect() {
         return enqueue(new MockResponse().setSocketPolicy(SocketPolicy.DISCONNECT_AT_START));
     }
 
     /**
-     * Helper method to enqueueNoBody a mock response without body.
+     * Helper method to enqueue a mock response without body.
      *
      * @param statusCode status code of response
+     * @return A matcher for request assertions.
      */
     public RequestMatcher enqueueNoBody(int statusCode) {
         return enqueue(new MockResponse()
@@ -69,10 +95,11 @@ public abstract class RequestMatcherRule implements TestRule {
 
     /**
      * Helper method to enqueue a mock response.
-     * Uses {@link IOReader#read(InputStream)} (String)} to read json from assetPath.
+     * Uses {@link IOReader#read(InputStream)} (String)} to read fixtures.
      *
      * @param statusCode status code of response
-     * @param assetPath  Path inside the "json" folder in androidTest/assets
+     * @param assetPath  Path inside the "fixtures" folder in androidTest/assets or test/resources
+     * @return A matcher for request assertions.
      */
     public RequestMatcher enqueue(int statusCode, String assetPath) {
         return enqueue(new MockResponse()
@@ -80,10 +107,23 @@ public abstract class RequestMatcherRule implements TestRule {
                 .setBody(readFixture(assetPath)));
     }
 
+    /**
+     * Helper method to enqueue a mock response without body for a GET request without body.
+     *
+     * @param statusCode status code of response
+     * @return A matcher for request assertions.
+     */
     public RequestMatcher enqueueGET(int statusCode) {
-        return enqueueNoBody(statusCode).assertNoBody().assertMethodIs(RequestMatcher.GET);
+        return enqueueNoBody(statusCode).assertMethodIs(RequestMatcher.GET);
     }
 
+    /**
+     * Helper method to enqueue a mock response for a GET request without body.
+     * Uses {@link IOReader#read(InputStream)} (String)} to read fixtures.
+     *
+     * @param statusCode status code of response
+     * @return A matcher for request assertions.
+     */
     public RequestMatcher enqueueGET(int statusCode, String assetPath) {
         return enqueue(statusCode, assetPath).assertNoBody().assertMethodIs(RequestMatcher.GET);
     }
